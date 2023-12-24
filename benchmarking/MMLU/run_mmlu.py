@@ -42,6 +42,19 @@ async def get_response(prompt: str, model: str):
                 },
             ],
         )
+    elif 'llama' in model:
+         response = await acompletion(
+            model='openai/meta-llama/Llama-2-7b-chat-hf',
+            messages=[
+                {
+                    'role': 'system',
+                    'content': 'Follow the given examples and answer the question.',
+                },
+                {'role': 'user', 'content': prompt},
+            ],
+            temperature=0,
+            api_base="http://0.0.0.0:8964/v1",
+        )       
     else:
         response = await acompletion(
             model=model,
@@ -68,6 +81,8 @@ def main(args, tasks=TASKS):
         litellm.vertex_location = ""  # Your Project Location
         litellm.drop_params = True
 
+    elif 'llama' in args.model_name:
+        args.model_name = 'llama'
     else:
         args.model_name = 'together_ai/mistralai/Mixtral-8x7B-Instruct-v0.1'
 
