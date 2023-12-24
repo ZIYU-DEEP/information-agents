@@ -3,6 +3,10 @@
 This code is mainly built upon [Chain-of-Thought Hub](https://github.com/FranxYao/chain-of-thought-hub) and [LiteLLM](https://github.com/BerriAI/litellm). We implemented additional code to support the original [MMLU](https://github.com/hendrycks/test) data format.
 
 ## How to evaluate MMLU with few-shot prompting (default)
+If you are running models on your local machine:
+```bash
+python start_server.py
+```
 
 ```bash
 python run_mmlu.py
