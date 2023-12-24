@@ -19,27 +19,23 @@ def start_vllm(model: str = 'meta-llama/Llama-2-7b-chat-hf',
 
 
 if __name__ == '__main__':
-    # Read the config
-    with open('config.yaml', 'r') as file:
-        config = yaml.safe_load(file)
 
     # Set the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', type=str,
                         default='gpt-3.5-turbo',
                         choices=['llama-2-7b', 'llama-2-13b', 'llama-2-70b'])
-    parser.add_argument('--tensor_parallel_size', '-t', type=int, default=4)
     parser.add_argument('--port', '-p', type=int, default=8964)
     parser.add_argument('--cuda_devices', '-c', type=str, default=None,
                         help='Optional: Comma-separated list of CUDA device IDs')
     p = parser.parse_args()
 
-    # An example command
-    # python start_server.py --model_name llama-2-7b -t 4 -p 8964 -c 1,2,3,4
-
+    # Read the config
+    with open('config.yaml', 'r') as file:
+        server_config = yaml.safe_load(file)['SERVER'][p.model_name]
 
     # Run the file
-    start_vllm(config['MODEL'][p.model_name]['model'],
-               p.tensor_parallel_size,
+    start_vllm(server_config['model'],
+               server_config['tensor_parallel_size'],
                p.port,
                p.cuda_devices)

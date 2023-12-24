@@ -39,16 +39,37 @@ MODEL:
     #  LLAMA
     # =============================================
     'llama-2-7b':
-        model: 'meta-llama/Llama-2-7b-chat-hf'
+        model: 'openai/meta-llama/Llama-2-7b-chat-hf'
         temperature: 0
         api_base: 'http://localhost:8964/v1'
 
     'llama-2-13b':
-        model: 'meta-llama/Llama-2-13b-chat-hf'
+        model: 'openai/meta-llama/Llama-2-13b-chat-hf'
         temperature: 0
         api_base: 'http://localhost:8964/v1'
 
     'llama-2-70b':
-        model: 'meta-llama/Llama-2-70b-chat-hf'
+        model: 'openai/meta-llama/Llama-2-70b-chat-hf'
         temperature: 0
         api_base: 'http://localhost:8964/v1'
+
+# ######################
+SERVER:
+# ######################
+    # =============================================
+    #  LLAMA
+    # =============================================
+    'llama-2-7b':
+        model: 'meta-llama/Llama-2-7b-chat-hf'
+        port: 8964
+        tensor_parallel_size: 4
+
+    'llama-2-13b':
+        model: 'meta-llama/Llama-2-13b-chat-hf'
+        port: 8964
+        tensor_parallel_size: 8
+
+    'llama-2-70b':
+        model: 'meta-llama/Llama-2-70b-chat-hf'
+        port: 8964
+        tensor_parallel_size: 8

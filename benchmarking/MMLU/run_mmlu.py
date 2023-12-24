@@ -1,6 +1,7 @@
 from litellm import acompletion
 from tqdm import tqdm
 from utils import *
+from typing import Dict
 import pandas as pd
 import asyncio
 import litellm
@@ -87,6 +88,11 @@ async def get_response(prompt: str, model: str, config: Dict):
         {'role': 'user',
         'content': prompt}
     ]
+
+    # # Handle the LiteLLM specific setting for vllm
+    # if 'llama' in model:
+    #     name_str = model_config['model']
+    #     model_config['model'] = f"openai/{name_str}"
 
     # Add the messages to the model_config
     model_config['messages'] = messages
