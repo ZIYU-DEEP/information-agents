@@ -5,68 +5,95 @@ import pandas as pd
 import asyncio
 import litellm
 import json
+import yaml
 
 # parse arguments
 import argparse
 import os
 
 
-async def get_response(prompt: str, model: str):
-    if 'gemini' in model:
-        response = await acompletion(
-            model=model,
-            messages=[
-                {
-                    'role': 'system',
-                    'content': 'Follow the given examples and answer the question.',
-                },
-                {'role': 'user', 'content': prompt},
-            ],
-            temperature=0,
-            safety_settings=[
-                {
-                    'category': 'HARM_CATEGORY_HARASSMENT',
-                    'threshold': 'BLOCK_NONE',
-                },
-                {
-                    'category': 'HARM_CATEGORY_HATE_SPEECH',
-                    'threshold': 'BLOCK_NONE',
-                },
-                {
-                    'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-                    'threshold': 'BLOCK_NONE',
-                },
-                {
-                    'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-                    'threshold': 'BLOCK_NONE',
-                },
-            ],
-        )
-    elif 'llama' in model:
-         response = await acompletion(
-            model='openai/meta-llama/Llama-2-7b-chat-hf',
-            messages=[
-                {
-                    'role': 'system',
-                    'content': 'Follow the given examples and answer the question.',
-                },
-                {'role': 'user', 'content': prompt},
-            ],
-            temperature=0,
-            api_base="http://0.0.0.0:8964/v1",
-        )       
-    else:
-        response = await acompletion(
-            model=model,
-            messages=[
-                {
-                    'role': 'system',
-                    'content': 'Follow the given examples and answer the question.',
-                },
-                {'role': 'user', 'content': prompt},
-            ],
-            temperature=0,
-        )
+# async def get_response(prompt: str, model: str):
+#     if 'gemini' in model:
+#         response = await acompletion(
+#             model=model,
+#             messages=[
+#                 {
+#                     'role': 'system',
+#                     'content': 'Follow the given examples and answer the question.',
+#                 },
+#                 {'role': 'user', 'content': prompt},
+#             ],
+#             temperature=0,
+#             safety_settings=[
+#                 {
+#                     'category': 'HARM_CATEGORY_HARASSMENT',
+#                     'threshold': 'BLOCK_NONE',
+#                 },
+#                 {
+#                     'category': 'HARM_CATEGORY_HATE_SPEECH',
+#                     'threshold': 'BLOCK_NONE',
+#                 },
+#                 {
+#                     'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+#                     'threshold': 'BLOCK_NONE',
+#                 },
+#                 {
+#                     'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
+#                     'threshold': 'BLOCK_NONE',
+#                 },
+#             ],
+#         )
+#     elif 'llama' in model:
+#          response = await acompletion(
+#             model='openai/meta-llama/Llama-2-7b-chat-hf',
+#             messages=[
+#                 {
+#                     'role': 'system',
+#                     'content': 'Follow the given examples and answer the question.',
+#                 },
+#                 {'role': 'user', 'content': prompt},
+#             ],
+#             temperature=0,
+#             api_base="http://0.0.0.0:8964/v1",
+#         )
+#     else:
+#         response = await acompletion(
+#             model=model,
+#             messages=[
+#                 {
+#                     'role': 'system',
+#                     'content': 'Follow the given examples and answer the question.',
+#                 },
+#                 {'role': 'user', 'content': prompt},
+#             ],
+#             temperature=0,
+#         )
+#     return response
+
+
+async def get_response(prompt: str, model: str, config: Dict):
+    """
+    Get the response from the model.
+    """
+
+    # Extract the model config
+    model_config = config['MODEL'][model]
+
+    # Construct messages with the dynamic prompt
+    messages = [
+        {'role': 'system',
+         'content': 'Follow the given examples and answer the question.'},
+
+        {'role': 'user',
+        'content': prompt}
+    ]
+
+    # Add the messages to the model_config
+    model_config['messages'] = messages
+
+    # Call acompletion with the unpacked config
+    response = await acompletion(**model_config)
+
     return response
 
 
@@ -81,11 +108,6 @@ def main(args, tasks=TASKS):
         litellm.vertex_location = ""  # Your Project Location
         litellm.drop_params = True
 
-    elif 'llama' in args.model_name:
-        args.model_name = 'llama'
-    else:
-        args.model_name = 'together_ai/mistralai/Mixtral-8x7B-Instruct-v0.1'
-
     if args.cot:
         mmlu_cot_prompt = json.load(open('data/mmlu-cot.json'))
         method_name = 'cot'
@@ -98,15 +120,23 @@ def main(args, tasks=TASKS):
     # Set the file path
     os.makedirs('outputs', exist_ok=True)
     outputs_file = open(f'outputs/{args.model_name}_{method_name}_outputs.json', 'a')
+
+    # Load the config
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
+
     for task in tasks:
         print(f'Testing {task} ...')
         acc = 0
+
         dev_df = pd.read_csv(
             os.path.join("data", "dev", task + "_dev.csv"), header=None
         )[: args.num_examples]
+
         test_df = pd.read_csv(
             os.path.join("data", "test", task + "_test.csv"), header=None
         )
+
         for i in tqdm(range(test_df.shape[0])):
             if args.cot:
                 # chain of thought
@@ -118,7 +148,7 @@ def main(args, tasks=TASKS):
                 prompt = mmlu_cot_prompt[task] + "\n\n" + q
                 label = test_df.iloc[i, test_df.shape[1] - 1]
 
-                response = asyncio.run(get_response(prompt, args.model_name))
+                response = asyncio.run(get_response(prompt, args.model_name, config))
                 ans_model = response["choices"][0]["message"]["content"]
                 ans_, residual = extract_ans(ans_model)
 
@@ -133,7 +163,7 @@ def main(args, tasks=TASKS):
                 prompt = train_prompt + prompt_end
                 label = test_df.iloc[i, test_df.shape[1] - 1]
 
-                response = asyncio.run(get_response(prompt, args.model_name))
+                response = asyncio.run(get_response(prompt, args.model_name, config))
                 # 0 means the answer character [A, B, C, D] (sometimes model will output more)
                 ans_model = response["choices"][0]["message"]["content"][0]
 

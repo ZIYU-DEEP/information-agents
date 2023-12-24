@@ -1,0 +1,54 @@
+# ######################
+MODEL:
+# ######################
+    # =============================================
+    #  Gemini
+    # =============================================
+    'gemini':
+        model: 'gemini-pro'
+        temperature: 0
+        safety_settings:
+            - category: 'HARM_CATEGORY_HARASSMENT'
+              threshold: 'BLOCK_NONE'
+            - category: 'HARM_CATEGORY_HATE_SPEECH'
+              threshold: 'BLOCK_NONE'
+            - category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT'
+              threshold: 'BLOCK_NONE'
+            - category: 'HARM_CATEGORY_DANGEROUS_CONTENT'
+              threshold: 'BLOCK_NONE'
+
+    # =============================================
+    #  GPT
+    # =============================================
+    'gpt-3.5-turbo':
+        model: 'gpt-3.5-turbo'
+        temperature: 0
+
+    'gpt-4-1106-preview':
+        model: 'gpt-3.5-turbo'
+        temperature: 0
+
+    # =============================================
+    #  Mixtral
+    # =============================================
+    'mixtral':
+        model: 'together_ai/mistralai/Mixtral-8x7B-Instruct-v0.1'
+        temperature: 0
+
+    # =============================================
+    #  LLAMA
+    # =============================================
+    'llama-2-7b':
+        model: 'meta-llama/Llama-2-7b-chat-hf'
+        temperature: 0
+        api_base: 'http://localhost:8964/v1'
+
+    'llama-2-13b':
+        model: 'meta-llama/Llama-2-13b-chat-hf'
+        temperature: 0
+        api_base: 'http://localhost:8964/v1'
+
+    'llama-2-70b':
+        model: 'meta-llama/Llama-2-70b-chat-hf'
+        temperature: 0
+        api_base: 'http://localhost:8964/v1'
