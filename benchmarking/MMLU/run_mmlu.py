@@ -7,69 +7,8 @@ import asyncio
 import litellm
 import json
 import yaml
-
-# parse arguments
 import argparse
 import os
-
-
-# async def get_response(prompt: str, model: str):
-#     if 'gemini' in model:
-#         response = await acompletion(
-#             model=model,
-#             messages=[
-#                 {
-#                     'role': 'system',
-#                     'content': 'Follow the given examples and answer the question.',
-#                 },
-#                 {'role': 'user', 'content': prompt},
-#             ],
-#             temperature=0,
-#             safety_settings=[
-#                 {
-#                     'category': 'HARM_CATEGORY_HARASSMENT',
-#                     'threshold': 'BLOCK_NONE',
-#                 },
-#                 {
-#                     'category': 'HARM_CATEGORY_HATE_SPEECH',
-#                     'threshold': 'BLOCK_NONE',
-#                 },
-#                 {
-#                     'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-#                     'threshold': 'BLOCK_NONE',
-#                 },
-#                 {
-#                     'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-#                     'threshold': 'BLOCK_NONE',
-#                 },
-#             ],
-#         )
-#     elif 'llama' in model:
-#          response = await acompletion(
-#             model='openai/meta-llama/Llama-2-7b-chat-hf',
-#             messages=[
-#                 {
-#                     'role': 'system',
-#                     'content': 'Follow the given examples and answer the question.',
-#                 },
-#                 {'role': 'user', 'content': prompt},
-#             ],
-#             temperature=0,
-#             api_base="http://0.0.0.0:8964/v1",
-#         )
-#     else:
-#         response = await acompletion(
-#             model=model,
-#             messages=[
-#                 {
-#                     'role': 'system',
-#                     'content': 'Follow the given examples and answer the question.',
-#                 },
-#                 {'role': 'user', 'content': prompt},
-#             ],
-#             temperature=0,
-#         )
-#     return response
 
 
 async def get_response(prompt: str, model: str, config: Dict):
@@ -88,11 +27,6 @@ async def get_response(prompt: str, model: str, config: Dict):
         {'role': 'user',
         'content': prompt}
     ]
-
-    # # Handle the LiteLLM specific setting for vllm
-    # if 'llama' in model:
-    #     name_str = model_config['model']
-    #     model_config['model'] = f"openai/{name_str}"
 
     # Add the messages to the model_config
     model_config['messages'] = messages
@@ -133,49 +67,64 @@ def main(args, tasks=TASKS):
 
     for task in tasks:
         print(f'Testing {task} ...')
+
+        # Initialize the accuracy
         acc = 0
 
+        # Reading files
         dev_df = pd.read_csv(
-            os.path.join("data", "dev", task + "_dev.csv"), header=None
+            os.path.join('data', 'dev', task + '_dev.csv'), header=None
         )[: args.num_examples]
 
         test_df = pd.read_csv(
-            os.path.join("data", "test", task + "_test.csv"), header=None
+            os.path.join('data', 'test', task + '_test.csv'), header=None
         )
 
         for i in tqdm(range(test_df.shape[0])):
-            if args.cot:
-                # chain of thought
-                q = test_df.iloc[i, 0] + "\n"
-                for j, letter in enumerate(["A", "B", "C", "D"]):
-                    q += "(" + letter + ") " + str(test_df.iloc[i, j + 1]) + " "
-                q += "\nA: Let's think step by step."
 
-                prompt = mmlu_cot_prompt[task] + "\n\n" + q
+            # CoT prompting
+            if args.cot:
+
+                # Format the question prompt
+                q = test_df.iloc[i, 0] + '\n'
+                for j, letter in enumerate(['A', 'B', 'C', 'D']):
+                    q += '(' + letter + ') ' + str(test_df.iloc[i, j + 1]) + ' '
+
+                # Add THE CoT prompt, each are about 5 shot examples
+                q += "\nA: Let's think step by step."
+                prompt = mmlu_cot_prompt[task] + '\n\n' + q
                 label = test_df.iloc[i, test_df.shape[1] - 1]
 
+                # Get the response
                 response = asyncio.run(get_response(prompt, args.model_name, config))
                 ans_model = response["choices"][0]["message"]["content"]
                 ans_, residual = extract_ans(ans_model)
 
+                # Calculate the accuracy
                 ans_model, correct = test_answer_mmlu_(ans_, label)
-                if correct:
-                    acc += 1
+                if correct: acc += 1
+
+            # Simple prompting
             else:
-                # simple prompting
+                # Set the number for the examples
                 k = args.num_examples
+
+                # Format the prompt
                 prompt_end = format_example(test_df, i, include_answer=False)
                 train_prompt = gen_prompt(dev_df, task, k)
                 prompt = train_prompt + prompt_end
                 label = test_df.iloc[i, test_df.shape[1] - 1]
 
+                # Get the response
                 response = asyncio.run(get_response(prompt, args.model_name, config))
                 # 0 means the answer character [A, B, C, D] (sometimes model will output more)
                 ans_model = response["choices"][0]["message"]["content"][0]
 
+                # Calculate the accuracy
                 correct = ans_model == label
-                if correct:
-                    acc += 1
+                if correct: acc += 1
+
+            # Write the results
             outputs_file.write(
                 json.dumps(
                     {
@@ -198,10 +147,10 @@ def main(args, tasks=TASKS):
         accs_json[task] = acc / test_df.shape[0]
         all_acc += acc
         all_number += test_df.shape[0]
+
+    # Save the results
     accs_json["all"] = all_acc / all_number
-    json.dump(
-        accs_json, open(f"outputs/{args.model_name}_{method_name}_accs.json", "w")
-    )
+    json.dump(accs_json, open(f"outputs/{args.model_name}_{method_name}_accs.json", "w"))
 
 
 if __name__ == "__main__":
