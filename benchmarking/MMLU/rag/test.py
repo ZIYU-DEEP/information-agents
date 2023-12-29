@@ -12,17 +12,8 @@ from scipy import spatial  # for calculating vector similarities for search
 from datasets import load_dataset
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
+import argparse
 import json
-
-
-# ##########################################
-# Temp arguments
-# ##########################################
-task_name = 'anatomy'
-embeddings_path = '../collections/wiki/anatomy.csv'
-EMBEDDING_MODEL = 'text-embedding-ada-002'
-GPT_MODEL = 'gpt-3.5-turbo'
-result_path = f'{GPT_MODEL}_rag_acc.json'
 
 # ##########################################
 # Helper Functions
@@ -183,6 +174,25 @@ def plain_ask(query):
 # ##########################################
 # Main Function
 # ##########################################
+# Create the parser
+parser = argparse.ArgumentParser()
+
+# Add arguments
+parser.add_argument('-tn', '--task_name', type=str, default='anatomy', help='Task name')
+parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/anatomy.csv')
+parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
+parser.add_argument('-gm', '--GPT_MODEL', type=str, default='gpt-3.5-turbo', help='GPT model')
+
+# Parse arguments
+p = parser.parse_args()
+
+# Update globals
+for key, value in vars(p).items():
+    globals()[key] = value
+
+result_path = f'{GPT_MODEL}_{test_name}_rag_acc.json'
+
+# Datasets
 print('Loading dataset...')
 task_data = load_dataset('lukaemon/mmlu', task_name)
 print('Loading embeddings...')
@@ -228,25 +238,3 @@ with open(result_path, 'w') as json_file:
 
 print(results_dict)
 print(f'Results saved to {result_path}.')
-
-# acc_plain = 0
-# acc_rag = 0
-#
-# for i in range(len(task_data['test'])):
-#     # Set the query
-#     query = get_prompt(task_data, question_no=i)
-#
-#     # Get the answers
-#     target = task_data['test']['target'][i]
-#     direct_ans = plain_ask(query)[0]
-#     rag_ask(query, df)[0]
-#
-#     # Get the accuracy
-#     acc_plain += int(target == plain_ask(query)[0])
-#     acc_rag += int(target == rag_ask(query, df)[0])
-#
-#     break
-#
-# acc_plain /= len(task_data['test'])
-# acc_rag /= len(task_data['test'])
-# print(acc_plain)
