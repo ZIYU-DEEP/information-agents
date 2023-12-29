@@ -15,6 +15,26 @@ import asyncio
 import argparse
 import json
 
+
+# ##########################################
+# Arguments
+# ##########################################
+# Create the parser
+parser = argparse.ArgumentParser()
+
+# Add arguments
+parser.add_argument('-tn', '--task_name', type=str, default='college_biology')
+parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/biology.csv')
+parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
+parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
+
+# Parse arguments
+p = parser.parse_args()
+
+# Update globals
+for key, value in vars(p).items():
+    globals()[key] = value
+
 # ##########################################
 # Helper Functions
 # ##########################################
@@ -175,24 +195,7 @@ def plain_ask(query,
 # ##########################################
 # Main Function
 # ##########################################
-# Create the parser
-parser = argparse.ArgumentParser()
-
-# Add arguments
-parser.add_argument('-tn', '--task_name', type=str, default='astronomy')
-parser.add_argument('-ep', '--embeddings_root', type=str, default='../collections/wiki')
-parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
-parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
-
-# Parse arguments
-p = parser.parse_args()
-
-# Update globals
-for key, value in vars(p).items():
-    globals()[key] = value
-
 result_path = f'{model}_{task_name}_rag_acc.json'
-embeddings_path = f'{embeddings_root}/{task_name}.csv'
 
 # Datasets
 print('Loading dataset...')

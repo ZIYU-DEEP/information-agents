@@ -13,9 +13,9 @@ import tiktoken  # for counting tokens
 # ##########################################
 # Temp arguments
 # ##########################################
-search_term = 'biology'
+search_term = 'chemistry'
 MAX_TOKENS = 1600
-SAVE_PATH = "../collections/wiki/college_biology.csv"
+SAVE_PATH = "../collections/wiki/college_chemistry.csv"
 WIKI_SITE = 'en.wikipedia.org'
 GPT_MODEL = "gpt-3.5-turbo"
 EMBEDDING_MODEL = "text-embedding-ada-002"
@@ -53,7 +53,7 @@ def all_categories(site: mwclient.Site) -> list[str]:
 # ==========================================
 def titles_from_category(category: mwclient.listing.Category,
                          max_depth: int,
-                         limit: int) -> set[str]:
+                         limit: int=3000) -> set[str]:
     """
     Return a set of page titles in a given Wiki category and its subcategories.
     """
@@ -68,7 +68,7 @@ def titles_from_category(category: mwclient.listing.Category,
             deeper_titles = titles_from_category(cm, max_depth=max_depth - 1)
             titles.update(deeper_titles)
 
-        if len(titles) > 3000:
+        if len(titles) > limit:
             return titles
 
     return titles
