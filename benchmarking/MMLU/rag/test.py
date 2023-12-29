@@ -85,7 +85,7 @@ def strings_ranked_by_relatedness(
     return strings[:top_n], relatednesses[:top_n]
 
 
-def num_tokens(text: str, model: str = GPT_MODEL) -> int:
+def num_tokens(text: str, model: str) -> int:
     """
     Return the number of tokens in a string.
     """
@@ -128,8 +128,8 @@ def query_message(query: str,
 
 
 def rag_ask(query: str,
+            model: str = 'gpt-3.5-turbo',
             df: pd.DataFrame = None,
-            model: str = GPT_MODEL,
             token_budget: int = 4096 - 500,
             print_message: bool = False,) -> str:
     """
@@ -156,7 +156,8 @@ def rag_ask(query: str,
     return response_message
 
 
-def plain_ask(query):
+def plain_ask(query,
+              model: str = 'gpt-3.5-turbo'):
     """
     Directly ask the query.
     """
@@ -165,7 +166,7 @@ def plain_ask(query):
         messages=[{'role': 'system',
                    'content': f'You answer multiple choice questions.'},
                   {'role': 'user', 'content': query}],
-        model=GPT_MODEL,
+        model=model,
         temperature=0)
 
     return response.choices[0].message.content
@@ -178,10 +179,10 @@ def plain_ask(query):
 parser = argparse.ArgumentParser()
 
 # Add arguments
-parser.add_argument('-tn', '--task_name', type=str, default='anatomy', help='Task name')
-parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/anatomy.csv')
+parser.add_argument('-tn', '--task_name', type=str, default='astronomy')
+parser.add_argument('-ep', '--embeddings_root', type=str, default='../collections/wiki')
 parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
-parser.add_argument('-gm', '--GPT_MODEL', type=str, default='gpt-3.5-turbo', help='GPT model')
+parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
 
 # Parse arguments
 p = parser.parse_args()
@@ -190,7 +191,8 @@ p = parser.parse_args()
 for key, value in vars(p).items():
     globals()[key] = value
 
-result_path = f'{GPT_MODEL}_{test_name}_rag_acc.json'
+result_path = f'{model}_{task_name}_rag_acc.json'
+embeddings_path = f'{embeddings_root}/{task_name}.csv'
 
 # Datasets
 print('Loading dataset...')
@@ -200,23 +202,24 @@ df = pd.read_csv(embeddings_path)
 df['embedding'] = df['embedding'].apply(ast.literal_eval)
 
 # Function to process each task
-def process_task(i, task_data, df):
+def process_task(i, task_data, df, model):
     query = get_prompt(task_data, question_no=i)
     target = task_data['test']['target'][i]
-    acc_plain = int(target == plain_ask(query)[0])
-    acc_rag = int(target == rag_ask(query, df)[0])
+    acc_plain = int(target == plain_ask(query, model)[0])
+    acc_rag = int(target == rag_ask(query, model, df)[0])
     return acc_plain, acc_rag
 
 # Running the tasks in parallel using ThreadPoolExecutor
-def run_parallel_tasks(task_data, df):
+def run_parallel_tasks(task_data, df, model):
     with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(process_task, i, task_data, df) for i in range(len(task_data['test']))]
+        futures = [executor.submit(process_task, i, task_data, df, model)
+                   for i in range(len(task_data['test']))]
         results = [future.result() for future in futures]
     return results
 
 # Get the results
 print('Run parallel tasks!')
-results = run_parallel_tasks(task_data, df)
+results = run_parallel_tasks(task_data, df, model)
 
 # Calculate the total accuracy
 total_acc_plain = sum([result[0] for result in results])
