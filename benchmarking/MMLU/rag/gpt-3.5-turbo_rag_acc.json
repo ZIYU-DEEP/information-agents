@@ -1,25 +1,25 @@
 {
     {
         "task_name": "anatomy",
-        "plain_acc": 0.6492537313432836,
-        "rag_acc": 0.664179104477612
+        "raw_acc": 0.649,
+        "rag_acc": 0.664
     },
 
     {
         "task_name": "astronomy",
-        "plain_acc": 0.7284768211920529,
-        "rag_acc": 0.7615894039735099
+        "raw_acc": 0.728,
+        "rag_acc": 0.762
     },
 
     {
         "task_name": "college_biology",
-        "plain_acc": 0.7692307692307693,
-        "rag_acc": 0.7692307692307693
+        "raw_acc": 0.769,
+        "rag_acc": 0.769
     },
 
     {
         "task_name": "college_chemistry",
-        "plain_acc": 0.41414141414141414,
-        "rag_acc": 0.46464646464646464
+        "raw_acc": 0.414,
+        "rag_acc": 0.465
     },
 }
