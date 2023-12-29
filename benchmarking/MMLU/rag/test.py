@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 
 # Add arguments
 parser.add_argument('-tn', '--task_name', type=str, default='college_biology')
-parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/biology.csv')
+parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/college_biology.csv')
 parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
 parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
 
