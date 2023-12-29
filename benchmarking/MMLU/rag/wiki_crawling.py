@@ -52,7 +52,8 @@ def all_categories(site: mwclient.Site) -> list[str]:
 # Search the relevant category
 # ==========================================
 def titles_from_category(category: mwclient.listing.Category,
-                         max_depth: int) -> set[str]:
+                         max_depth: int,
+                         limit: int) -> set[str]:
     """
     Return a set of page titles in a given Wiki category and its subcategories.
     """
@@ -66,6 +67,9 @@ def titles_from_category(category: mwclient.listing.Category,
         elif isinstance(cm, mwclient.listing.Category) and max_depth > 0:
             deeper_titles = titles_from_category(cm, max_depth=max_depth - 1)
             titles.update(deeper_titles)
+
+        if len(titles) > 3000:
+            return titles
 
     return titles
 
