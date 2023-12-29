@@ -22,7 +22,9 @@ async def get_response(prompt: str, model: str, config: Dict):
     # Construct messages with the dynamic prompt
     messages = [
         {'role': 'system',
-         'content': 'Follow the given examples and answer the question.'},
+         'content': f'Follow the given examples and answer the question.'
+                    f'Please include only the letter choice in your answer and nothing else.'
+                    f'Specifically, your response should only be one of A or B or C or D.'},  # This is temporary
 
         {'role': 'user',
         'content': prompt}
@@ -139,7 +141,8 @@ def main(args, tasks=TASKS):
                         "C": test_df.iloc[i, 3],
                         "D": test_df.iloc[i, 4],
                         "prompt": prompt,
-                    }
+                    },
+                    indent=4,
                 )
                 + "\n"
             )
