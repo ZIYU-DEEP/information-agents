@@ -18,8 +18,9 @@ If you are running models on your local machine, you should start a server in th
 # Start the server in the backend
 python start_server.py \
     --model_name llama-2-7b \
+    --tensor_parallel_size 4\
     --port 8964 \
-    --cuda_devices 1,2,3,4
+    --cuda_devices 0,1,2,3
 
 # Run the evaluation
 python run_mmlu.py --model_name llama-2-7b

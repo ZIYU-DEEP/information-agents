@@ -25,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str,
                         default='gpt-3.5-turbo',
                         choices=['llama-2-7b', 'llama-2-13b', 'llama-2-70b'])
+    parser.add_argument('--tensor_parallel_size', '-t', type=int, default=4)
     parser.add_argument('--port', '-p', type=int, default=8964)
     parser.add_argument('--cuda_devices', '-c', type=str, default=None,
                         help='Optional: Comma-separated list of CUDA device IDs')
@@ -36,6 +37,6 @@ if __name__ == '__main__':
 
     # Run the file
     start_vllm(server_config['model'],
-               server_config['tensor_parallel_size'],
+               p.tensor_parallel_size,
                p.port,
                p.cuda_devices)
