@@ -2,9 +2,11 @@
 Crawling from Wikipedia.
 c.r. OpenAI Cookbook
 """
+from tqdm import tqdm
+from openai import OpenAI  # for generating embeddings
+
 import mwclient  # for downloading example Wikipedia articles
 import mwparserfromhell  # for splitting Wikipedia articles into sections
-import openai  # for generating embeddings
 import pandas as pd  # for DataFrames to store article sections and embeddings
 import re  # for cutting <ref> links out of Wikipedia articles
 import tiktoken  # for counting tokens
@@ -20,6 +22,7 @@ WIKI_SITE = 'en.wikipedia.org'
 GPT_MODEL = "gpt-3.5-turbo"
 EMBEDDING_MODEL = "text-embedding-ada-002"
 BATCH_SIZE = 1000
+CATEGORY_LIMIT = 10
 
 # ##########################################
 # Helper Functions
@@ -27,12 +30,18 @@ BATCH_SIZE = 1000
 # ==========================================
 # Search the relevant category
 # ==========================================
+
 def search_categories(site, search_term):
     """
     Search for categories using the search API.
     """
-
-    return [page['title'] for page in site.search(search_term, namespace=14)]
+    categories = []
+    
+    for page in tqdm(site.search(search_term, namespace=14), 
+                     desc=f"Searching for '{search_term}'"):
+        
+        categories.append(page['title'])
+    return categories
 
 
 def all_categories(site: mwclient.Site) -> list[str]:
@@ -60,7 +69,7 @@ def titles_from_category(category: mwclient.listing.Category,
 
     titles = set()
 
-    for cm in category.members():
+    for cm in tqdm(category.members()):
         if type(cm) == mwclient.page.Page:
             # ^type() used instead of isinstance() to catch match w/ no inheritance
             titles.add(cm.name)
@@ -292,6 +301,7 @@ def split_strings_from_subsection(
     return [truncated_string(string, model=model, max_tokens=max_tokens)]
 
 
+
 # ##########################################
 # Main function
 # ##########################################
@@ -307,7 +317,7 @@ CATEGORY_TITLE = found_categories[0]
 # ==========================================
 site = mwclient.Site(WIKI_SITE)
 category_page = site.pages[CATEGORY_TITLE]
-titles = titles_from_category(category_page, max_depth=1)
+titles = titles_from_category(category_page, max_depth=1, limit=CATEGORY_LIMIT)
 # ^note: max_depth=1 means we go one level deep in the category tree
 print(f"Found {len(titles)} article titles in {CATEGORY_TITLE}.")
 
@@ -317,7 +327,7 @@ print(f"Found {len(titles)} article titles in {CATEGORY_TITLE}.")
 # split pages into sections
 # may take ~1 minute per 100 articles
 wikipedia_sections = []
-for title in titles:
+for title in tqdm(titles):
     wikipedia_sections.extend(all_subsections_from_title(title))
 print(f"Found {len(wikipedia_sections)} sections in {len(titles)} pages.")
 
@@ -336,21 +346,23 @@ print(f"leaving {len(wikipedia_sections)} sections.")
 # ==========================================
 # split sections into chunks
 wikipedia_strings = []
-for section in wikipedia_sections:
+for section in tqdm(wikipedia_sections):
     wikipedia_strings.extend(split_strings_from_subsection(section, max_tokens=MAX_TOKENS))
 
 print(f"{len(wikipedia_sections)} Wikipedia sections split into {len(wikipedia_strings)} strings.")
 
 # Calculate Embeddings
 embeddings = []
-for batch_start in range(0, len(wikipedia_strings), BATCH_SIZE):
+client = OpenAI()
+
+for batch_start in tqdm(range(0, len(wikipedia_strings), BATCH_SIZE)):
     batch_end = batch_start + BATCH_SIZE
     batch = wikipedia_strings[batch_start:batch_end]
     print(f"Batch {batch_start} to {batch_end-1}")
-    response = openai.Embedding.create(model=EMBEDDING_MODEL, input=batch)
-    for i, be in enumerate(response["data"]):
-        assert i == be["index"]  # double check embeddings are in same order as input
-    batch_embeddings = [e["embedding"] for e in response["data"]]
+    response = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+    for i, be in enumerate(response.data):
+        assert i == be.index  # double check embeddings are in same order as input
+    batch_embeddings = [e.embedding for e in response.data]
     embeddings.extend(batch_embeddings)
 
 df = pd.DataFrame({"text": wikipedia_strings, "embedding": embeddings})

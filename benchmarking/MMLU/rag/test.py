@@ -2,9 +2,8 @@
 Using RAG to improve QA.
 """
 
-# from openai import OpenAI
+from openai import OpenAI
 import ast  # for converting embeddings saved as strings back to arrays
-import openai
 import pandas as pd  # for storing text and embeddings data
 import tiktoken  # for counting tokens
 import os # for getting API token from env variable OPENAI_API_KEY
@@ -23,13 +22,13 @@ import json
 parser = argparse.ArgumentParser()
 
 # Add arguments
-parser.add_argument('-tn', '--task_name', type=str, default='college_biology')
+parser.add_argument('-tn', '--task_name', type=str, default='college_chemistry')
 parser.add_argument('-ep', '--embeddings_path', type=str, default='../collections/wiki/college_biology.csv')
 parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
 parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
 
 # Parse arguments
-p = parser.parse_args()
+p = parser.parse_args('')
 
 # Update globals
 for key, value in vars(p).items():
@@ -87,7 +86,7 @@ def strings_ranked_by_relatedness(
     Returns a list of strings and relatednesses, sorted from most related to least.
     """
 
-    query_embedding_response = openai.Embedding.create(
+    query_embedding_response = OpenAI().embeddings.create(
         model=EMBEDDING_MODEL,
         input=query,
     )
@@ -167,7 +166,7 @@ def rag_ask(query: str,
                     f'Specifically, your response should only be one of A or B or C or D.'},
         {"role": "user", "content": message},
     ]
-    response = openai.ChatCompletion.create(
+    response = OpenAI().chat.completions.create(
         model=model,
         messages=messages,
         temperature=0
@@ -182,7 +181,7 @@ def plain_ask(query,
     Directly ask the query.
     """
 
-    response = openai.ChatCompletion.create(
+    response = OpenAI().chat.completions.create(
         messages=[{'role': 'system',
                    'content': f'You answer multiple choice questions.'},
                   {'role': 'user', 'content': query}],
