@@ -22,4 +22,65 @@
         "raw_acc": 0.414,
         "rag_acc": 0.465
     },
+
+    {
+        "task_name": "computer_security",
+        "plain_acc": 0.7272727272727273,
+        "rag_acc": 0.8080808080808081
+    },
+
+    {
+        "task_name": "econometrics",
+        "plain_acc": 0.4690265486725664,
+        "rag_acc": 0.4690265486725664
+    },
+
+    {
+        "task_name": "jurisprudence",
+        "plain_acc": 0.7663551401869159,
+        "rag_acc": 0.8130841121495327
+    },
+
+    {
+        "task_name": "machine_learning",
+        "plain_acc": 0.42342342342342343,
+        "rag_acc": 0.45045045045045046
+    },
+
+    {
+        "task_name": "nutrition",
+        "plain_acc": 0.7213114754098361,
+        "rag_acc": 0.7081967213114754
+    },
+
+    {
+        "task_name": "philosophy",
+        "plain_acc": 0.7096774193548387,
+        "rag_acc": 0.7451612903225806
+    },
+
+    {
+        "task_name": "prehistory",
+        "plain_acc": 0.7151702786377709,
+        "rag_acc": 0.7708978328173375
+    },
+
+    {
+        "task_name": "sociology",
+        "plain_acc": 0.845,
+        "rag_acc": 0.84
+    },
+
+    {
+        "task_name": "us_foreign_policy",
+        "plain_acc": 0.8181818181818182,
+        "rag_acc": 0.8686868686868687
+    },
+
+    {
+        "task_name": "virology",
+        "plain_acc": 0.49696969696969695,
+        "rag_acc": 0.47878787878787876
+    },
+
 }
