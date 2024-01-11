@@ -17,34 +17,6 @@ import json
 
 
 # ##########################################
-# Arguments
-# ##########################################
-# Create the parser
-parser = argparse.ArgumentParser()
-
-# Add arguments
-parser.add_argument('-tn', '--task_name', type=str, default='prehistory')
-parser.add_argument('-st', '--search_term', type=str, default='')
-parser.add_argument('-ep', '--embeddings_path', type=str, default='')
-parser.add_argument('-rr', '--result_root', type=str, default='./results')
-parser.add_argument('-em', '--EMBEDDING_MODEL', type=str, default='text-embedding-ada-002')
-parser.add_argument('-gm', '--model', type=str, default='gpt-3.5-turbo')
-
-# Parse arguments
-p = parser.parse_args()
-
-# Update globals
-for key, value in vars(p).items():
-    globals()[key] = value
-
-# Automatically config the embeddings path
-if not search_term:
-    search_term = task_name
-
-if not embeddings_path:
-    embeddings_path = f'../collections/wiki/{search_term}.csv'
-
-# ##########################################
 # Helper Functions
 # ##########################################
 # ==========================================
@@ -65,7 +37,11 @@ def get_prompt(task_data,
     for letter in ['A', 'B', 'C', 'D']:
         prompt_add += '    ' + letter + '. ' + task_data[prompt_set][letter][question_no] + '\n'
 
-    prompt_add += f"Answer: "
+    prompt_add += (f'Now please provide your answer.'
+                   f'Include only the letter choice in your answer and nothing else.'
+                   f'Specifically, your response should only be one of A or B or C or D.')
+
+    prompt_add += f'Your answer: '
     return prompt_add
 
 
@@ -76,7 +52,8 @@ def strings_ranked_by_relatedness(
     query: str,
     df: pd.DataFrame,
     relatedness_fn=lambda x, y: 1 - spatial.distance.cosine(x, y),
-    top_n: int = 100
+    top_n: int = 100,
+    embedding_model: str = 'text-embedding-ada-002'
 
 ) -> tuple[list[str], list[float]]:
 
@@ -85,7 +62,7 @@ def strings_ranked_by_relatedness(
     """
 
     query_embedding_response = OpenAI().embeddings.create(
-        model=EMBEDDING_MODEL,
+        model=embedding_model,
         input=query,
     )
 
@@ -117,14 +94,19 @@ def num_tokens(text: str, model: str) -> int:
 def query_message(query: str,
                   df: pd.DataFrame,
                   model: str,
-                  token_budget: int) -> str:
+                  token_budget: int,
+                  embedding_model: str) -> str:
 
     """
     Return a message for GPT, with relevant source texts pulled from a dataframe.
     """
 
     # Get strings ranked by relatedness
-    strings, relatednesses = strings_ranked_by_relatedness(query, df, top_n=100)
+    strings, relatednesses = strings_ranked_by_relatedness(
+        query=query,
+        df=df,
+        top_n=100,
+        embedding_model=embedding_model)
 
     # Format the prompt
     message = (f'Use the below articles as an additional knowledge base'
@@ -148,21 +130,28 @@ def rag_ask(query: str,
             model: str = 'gpt-3.5-turbo',
             df: pd.DataFrame = None,
             token_budget: int = 4096 - 500,
-            print_message: bool = False,) -> str:
+            print_message: bool = False,
+            embedding_model: str='text-embedding-ada-002') -> str:
     """
     Answers a query using GPT and a dataframe of relevant texts and embeddings.
     """
 
-    message = query_message(query, df, model=model, token_budget=token_budget)
+    message = query_message(
+        query=query,
+        df=df,
+        model=model,
+        token_budget=token_budget,
+        embedding_model=embedding_model)
 
     if print_message:
         print(message)
     messages = [
-        {"role": "system",
+        {'role': 'system',
          'content': f'You answer multiple choice questions.'
                     f'Please include only the letter choice in your answer and nothing else.'
                     f'Specifically, your response should only be one of A or B or C or D.'},
-        {"role": "user", "content": message},
+        {'role': 'user',
+        'content': message},
     ]
     response = OpenAI().chat.completions.create(
         model=model,
@@ -180,73 +169,15 @@ def plain_ask(query,
     """
 
     response = OpenAI().chat.completions.create(
-        messages=[{'role': 'system',
-                   'content': f'You answer multiple choice questions.'},
-                  {'role': 'user', 'content': query}],
+        messages=[
+        {'role': 'system',
+         'content': f'You answer multiple choice questions.'
+                    f'Please include only the letter choice in your answer and nothing else.'
+                    f'Specifically, your response should only be one of A or B or C or D.'},
+        {'role': 'user',
+         'content': query},
+        ],
         model=model,
         temperature=0)
 
     return response.choices[0].message.content
-
-
-# ##########################################
-# Main Function
-# ##########################################
-result_path = Path(result_root) / f'{model}_{task_name}_rag_acc.json'
-
-# Datasets
-print('Loading dataset...')
-task_data = load_dataset('lukaemon/mmlu', task_name)
-
-print('Loading embeddings...')
-df = pd.read_csv(embeddings_path)
-df['embedding'] = df['embedding'].apply(ast.literal_eval)
-
-# Function to process each task
-def process_task(i, task_data, df, model):
-    # Get the query
-    query = get_prompt(task_data, question_no=i)
-
-    # Get the target value (A/B/C/D)
-    target = task_data['test']['target'][i]
-
-    # Calculate the accuracy
-    acc_plain = int(target == plain_ask(query, model)[0])
-    acc_rag = int(target == rag_ask(query, model, df)[0])
-    return acc_plain, acc_rag
-
-# Running the tasks in parallel using ThreadPoolExecutor
-def run_parallel_tasks(task_data, df, model):
-
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(process_task, i, task_data, df, model)
-                   for i in range(len(task_data['test']))]
-
-        results = [future.result() for future in futures]
-
-    return results
-
-# Get the results
-print('Run parallel tasks!')
-results = run_parallel_tasks(task_data, df, model)
-
-# Calculate the total accuracy
-total_acc_plain = sum([result[0] for result in results])
-total_acc_rag = sum([result[1] for result in results])
-
-# Get the results
-plain_acc = total_acc_plain / len(task_data['test'])
-rag_acc = total_acc_rag / len(task_data['test'])
-
-# Save the results to a JSON file
-results_dict = {
-    'task_name': task_name,
-    'plain_acc': plain_acc,
-    'rag_acc': rag_acc
-}
-
-with open(result_path, 'w') as json_file:
-    json.dump(results_dict, json_file, indent=4)
-
-print(results_dict)
-print(f'Results saved to {result_path}.')

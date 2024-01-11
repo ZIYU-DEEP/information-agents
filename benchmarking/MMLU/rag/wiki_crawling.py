@@ -21,7 +21,8 @@ import argparse
 parser = argparse.ArgumentParser()
 
 # Add arguments
-parser.add_argument('-st', '--search_term', type=str, default='prehistory')
+parser.add_argument('-t', '--task_name', type=str, default='prehistory')
+parser.add_argument('-st', '--search_term', type=str, default='')
 parser.add_argument('-ep', '--embeddings_path', type=str, default='')
 parser.add_argument('-m', '--model', type=str, default='gpt-3.5-turbo')
 parser.add_argument('-ws', '--wiki_site', type=str, default='en.wikipedia.org')
@@ -37,6 +38,13 @@ p = parser.parse_args()
 # Update globals
 for key, value in vars(p).items():
     globals()[key] = value
+
+# Automatically config the search term
+if not search_term:
+    if task_name.startswith('college_'):
+        search_term = task_name.split('college_')[-1]
+    else:
+        search_term = task_name
 
 # Automatically config the embeddings path
 if not embeddings_path:

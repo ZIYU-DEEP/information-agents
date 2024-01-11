@@ -1,1 +1,0 @@
-subjects=[econometrics,jurisprudence,machine_learning,nutrition,sociology,virology,computer_security]
